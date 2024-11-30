@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2D Minecraft</title>
+  <title>2D Minecraft Expanded</title>
   <style>
     body {
       margin: 0;
@@ -22,7 +22,7 @@
       display: flex;
       gap: 10px;
     }
-    .controls button {
+    .controls button, .controls select {
       width: 60px;
       height: 60px;
       font-size: 18px;
@@ -32,6 +32,10 @@
       color: white;
       cursor: pointer;
     }
+    .controls select {
+      width: auto;
+      padding: 5px;
+    }
   </style>
 </head>
 <body>
@@ -40,21 +44,26 @@
     <button id="left">⬅️</button>
     <button id="jump">⬆️</button>
     <button id="right">➡️</button>
+    <select id="blockType">
+      <option value="1">Dirt</option>
+      <option value="2">Stone</option>
+    </select>
     <button id="build">🛠️</button>
     <button id="attack">⚔️</button>
+    <button id="save">💾</button>
+    <button id="load">📂</button>
   </div>
   <script>
-    // Set up canvas and context
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Game variables
     const tileSize = 40;
     const tilesX = Math.ceil(canvas.width / tileSize);
     const tilesY = Math.ceil(canvas.height / tileSize);
-    const world = Array(tilesY).fill().map((_, y) =>
+
+    let world = Array(tilesY).fill().map((_, y) =>
       Array(tilesX).fill(y > tilesY / 2 ? 1 : 0)
     );
 
@@ -65,17 +74,26 @@
       dy: 0,
       size: 1,
       onGround: false,
+      health: 10
+    };
+
+    const enemy = {
+      x: tilesX / 2 - 5,
+      y: tilesY / 2 - 2,
+      dx: 0.02,
+      health: 5
     };
 
     const gravity = 0.2;
     const jumpStrength = -5;
     const speed = 0.2;
 
-    // Draw the world and player
     function drawWorld() {
       for (let y = 0; y < tilesY; y++) {
         for (let x = 0; x < tilesX; x++) {
-          ctx.fillStyle = world[y][x] === 1 ? '#654321' : '#87CEEB';
+          if (world[y][x] === 1) ctx.fillStyle = '#654321'; // Dirt
+          else if (world[y][x] === 2) ctx.fillStyle = '#808080'; // Stone
+          else ctx.fillStyle = '#87CEEB';
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         }
       }
@@ -84,6 +102,15 @@
     function drawPlayer() {
       ctx.fillStyle = 'red';
       ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+      ctx.fillStyle = 'white';
+      ctx.fillText(`HP: ${player.health}`, player.x * tileSize, player.y * tileSize - 10);
+    }
+
+    function drawEnemy() {
+      ctx.fillStyle = 'green';
+      ctx.fillRect(enemy.x * tileSize, enemy.y * tileSize, tileSize, tileSize);
+      ctx.fillStyle = 'white';
+      ctx.fillText(`HP: ${enemy.health}`, enemy.x * tileSize, enemy.y * tileSize - 10);
     }
 
     function updatePlayer() {
@@ -91,7 +118,6 @@
       player.x += player.dx;
       player.y += player.dy;
 
-      // Collision detection
       const xTile = Math.floor(player.x);
       const yTile = Math.floor(player.y + player.size);
       if (world[yTile] && world[yTile][xTile] === 1) {
@@ -103,42 +129,67 @@
       }
     }
 
+    function updateEnemy() {
+      enemy.x += enemy.dx;
+
+      const xTile = Math.floor(enemy.x);
+      const yTile = Math.floor(enemy.y + enemy.size);
+      if (!world[yTile] || world[yTile][xTile] === 0) {
+        enemy.dx *= -1; // Reverse direction on edge
+      }
+    }
+
     function placeBlock() {
+      const blockType = parseInt(document.getElementById('blockType').value);
       const xTile = Math.floor(player.x);
       const yTile = Math.floor(player.y + player.size);
-      if (yTile < tilesY && xTile < tilesX) world[yTile][xTile] = 1;
+      if (yTile < tilesY && xTile < tilesX) world[yTile][xTile] = blockType;
     }
 
     function attack() {
-      console.log('Attack action!');
+      const distX = Math.abs(player.x - enemy.x);
+      const distY = Math.abs(player.y - enemy.y);
+      if (distX < 1 && distY < 1) {
+        enemy.health -= 1;
+        if (enemy.health <= 0) console.log("Enemy defeated!");
+      }
+    }
+
+    function saveWorld() {
+      localStorage.setItem('world', JSON.stringify(world));
+      alert('World saved!');
+    }
+
+    function loadWorld() {
+      const savedWorld = JSON.parse(localStorage.getItem('world'));
+      if (savedWorld) {
+        world = savedWorld;
+        alert('World loaded!');
+      }
     }
 
     function gameLoop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawWorld();
       drawPlayer();
+      drawEnemy();
       updatePlayer();
+      updateEnemy();
       requestAnimationFrame(gameLoop);
     }
 
-    // Controls
-    document.getElementById('left').addEventListener('mousedown', () => {
-      player.dx = -speed;
-    });
-    document.getElementById('right').addEventListener('mousedown', () => {
-      player.dx = speed;
-    });
+    document.getElementById('left').addEventListener('mousedown', () => player.dx = -speed);
+    document.getElementById('right').addEventListener('mousedown', () => player.dx = speed);
     document.getElementById('jump').addEventListener('mousedown', () => {
       if (player.onGround) player.dy = jumpStrength;
     });
     document.getElementById('build').addEventListener('mousedown', placeBlock);
     document.getElementById('attack').addEventListener('mousedown', attack);
+    document.getElementById('save').addEventListener('click', saveWorld);
+    document.getElementById('load').addEventListener('click', loadWorld);
 
-    document.body.addEventListener('mouseup', () => {
-      player.dx = 0;
-    });
+    document.body.addEventListener('mouseup', () => player.dx = 0);
 
-    // Start game loop
     gameLoop();
   </script>
 </body>
