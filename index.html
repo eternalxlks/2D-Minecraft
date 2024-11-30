@@ -7,126 +7,216 @@
     <style>
         body {
             margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #87CEEB; /* Sky blue */
+            overflow: hidden;
         }
         canvas {
-            border: 2px solid #000;
+            display: block;
             background: #87CEEB;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        .button {
+            width: 60px;
+            height: 60px;
+            margin: 0 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            user-select: none;
+        }
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <div id="left" class="button">◀</div>
+        <div id="right" class="button">▶</div>
+        <div id="jump" class="button">▲</div>
+        <div id="placeBlock" class="button">🟫</div>
+        <div id="attack" class="button">⚔️</div>
+    </div>
+    <div class="info">
+        Health: <span id="health">100</span> | Blocks: <span id="blocksCount">0</span>
+    </div>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        // Set canvas size
-        const TILE_SIZE = 32;
-        const ROWS = 15;
-        const COLS = 20;
-        canvas.width = COLS * TILE_SIZE;
-        canvas.height = ROWS * TILE_SIZE;
+        const TILE_SIZE = 40;
+        const BLOCK_COLOR = "brown";
+        const ENEMY_COLOR = "red";
+        const PLAYER_COLOR = "green";
 
-        // Initialize grid
-        const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-        // Block types
-        const BLOCK_TYPES = {
-            DIRT: "brown",
-            GRASS: "green",
-            STONE: "gray",
-        };
-
-        // Player properties
         const player = {
-            x: 5, // Grid position (column)
-            y: 10, // Grid position (row)
-            color: "blue",
+            x: 100,
+            y: 100,
+            width: TILE_SIZE,
+            height: TILE_SIZE,
+            color: PLAYER_COLOR,
+            speed: 5,
+            dx: 0,
+            dy: 0,
+            gravity: 0.5,
+            onGround: false,
+            health: 100,
+            attackPower: 10,
+            isAttacking: false
         };
 
-        // Current selected block type
-        let currentBlock = BLOCK_TYPES.DIRT;
+        const blocks = [];
+        const enemies = [];
+        let inventory = 0; // Blocks collected
+        let keys = { left: false, right: false, jump: false, placeBlock: false, attack: false };
 
-        // Draw the grid and player
-        function drawGrid() {
+        // Event listeners for mobile controls
+        document.getElementById("left").addEventListener("touchstart", () => (keys.left = true));
+        document.getElementById("left").addEventListener("touchend", () => (keys.left = false));
+        document.getElementById("right").addEventListener("touchstart", () => (keys.right = true));
+        document.getElementById("right").addEventListener("touchend", () => (keys.right = false));
+        document.getElementById("jump").addEventListener("touchstart", () => {
+            if (player.onGround) player.dy = -10;
+        });
+        document.getElementById("placeBlock").addEventListener("touchstart", () => {
+            if (inventory > 0) {
+                const blockX = Math.floor((player.x + player.width / 2) / TILE_SIZE) * TILE_SIZE;
+                const blockY = Math.floor((player.y + player.height) / TILE_SIZE) * TILE_SIZE;
+                blocks.push({ x: blockX, y: blockY, width: TILE_SIZE, height: TILE_SIZE, color: BLOCK_COLOR });
+                inventory--;
+                document.getElementById("blocksCount").innerText = inventory;
+            }
+        });
+        document.getElementById("attack").addEventListener("touchstart", () => (keys.attack = true));
+        document.getElementById("attack").addEventListener("touchend", () => (keys.attack = false));
+
+        // Enemy object
+        function createEnemy(x, y) {
+            enemies.push({ x, y, width: TILE_SIZE, height: TILE_SIZE, color: ENEMY_COLOR, dx: 2 });
+        }
+
+        // Add gravity, movement, and collision detection
+        function update() {
+            player.onGround = false;
+            player.dy += player.gravity;
+
+            if (keys.left) player.dx = -player.speed;
+            else if (keys.right) player.dx = player.speed;
+            else player.dx = 0;
+
+            if (keys.attack) {
+                player.isAttacking = true;
+            } else {
+                player.isAttacking = false;
+            }
+
+            player.x += player.dx;
+            player.y += player.dy;
+
+            blocks.forEach((block) => {
+                if (
+                    player.x < block.x + block.width &&
+                    player.x + player.width > block.x &&
+                    player.y + player.height > block.y &&
+                    player.y + player.height < block.y + block.height
+                ) {
+                    player.onGround = true;
+                    player.dy = 0;
+                    player.y = block.y - player.height;
+                }
+            });
+
+            if (player.y > canvas.height - player.height) {
+                player.onGround = true;
+                player.dy = 0;
+                player.y = canvas.height - player.height;
+            }
+
+            // Handle enemies
+            enemies.forEach((enemy) => {
+                enemy.x += enemy.dx;
+                if (enemy.x < 0 || enemy.x + enemy.width > canvas.width) {
+                    enemy.dx = -enemy.dx;
+                }
+
+                if (
+                    player.isAttacking &&
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    enemies.splice(enemies.indexOf(enemy), 1); // Enemy defeated
+                }
+
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    player.health -= 1; // Player takes damage
+                    document.getElementById("health").innerText = player.health;
+                }
+            });
+
+            // Check if health is zero
+            if (player.health <= 0) {
+                alert("Game Over");
+                player.health = 100;
+                document.getElementById("health").innerText = player.health;
+            }
+
+            // Spawn enemies periodically
+            if (Math.random() < 0.01) {
+                createEnemy(Math.random() * canvas.width, Math.random() * 200 + 100);
+            }
+        }
+
+        // Draw the game elements
+        function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            for (let row = 0; row < ROWS; row++) {
-                for (let col = 0; col < COLS; col++) {
-                    const block = grid[row][col];
-                    if (block) {
-                        ctx.fillStyle = block;
-                        ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
-                    ctx.strokeStyle = "black";
-                    ctx.strokeRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
-            }
-
-            // Draw the player
             ctx.fillStyle = player.color;
-            ctx.fillRect(player.x * TILE_SIZE, player.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            blocks.forEach((block) => {
+                ctx.fillStyle = block.color;
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+            });
+
+            enemies.forEach((enemy) => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
         }
 
-        // Place or remove blocks
-        function interactWithBlock() {
-            const { x, y } = player;
-            if (grid[y][x]) {
-                grid[y][x] = null; // Remove block
-            } else {
-                grid[y][x] = currentBlock; // Place block
-            }
+        // Main game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
         }
 
-        // Handle player movement
-        function movePlayer(dx, dy) {
-            const newX = player.x + dx;
-            const newY = player.y + dy;
-
-            if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS) {
-                player.x = newX;
-                player.y = newY;
-            }
-        }
-
-        // Handle keyboard input
-        window.addEventListener("keydown", (e) => {
-            switch (e.key) {
-                case "ArrowUp":
-                    movePlayer(0, -1); // Move up
-                    break;
-                case "ArrowDown":
-                    movePlayer(0, 1); // Move down
-                    break;
-                case "ArrowLeft":
-                    movePlayer(-1, 0); // Move left
-                    break;
-                case "ArrowRight":
-                    movePlayer(1, 0); // Move right
-                    break;
-                case " ":
-                    interactWithBlock(); // Place/remove block
-                    break;
-                case "1":
-                    currentBlock = BLOCK_TYPES.DIRT;
-                    break;
-                case "2":
-                    currentBlock = BLOCK_TYPES.GRASS;
-                    break;
-                case "3":
-                    currentBlock = BLOCK_TYPES.STONE;
-                    break;
-            }
-            drawGrid();
-        });
-
-        // Initial draw
-        drawGrid();
+        gameLoop();
     </script>
 </body>
 </html>
