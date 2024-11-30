@@ -71,10 +71,9 @@
     canvas.height = window.innerHeight;
 
     const tileSize = 40;
-    const tilesX = Math.ceil(canvas.width / tileSize);
-    const tilesY = Math.ceil(canvas.height / tileSize);
+    let tilesX = Math.ceil(canvas.width / tileSize);
+    let tilesY = Math.ceil(canvas.height / tileSize);
 
-    // Generate the world: top half empty, bottom half filled with dirt
     let world = Array(tilesY).fill().map((_, y) =>
       Array(tilesX).fill(y > tilesY / 2 ? 1 : 0)
     );
@@ -86,7 +85,7 @@
       dy: 0,
       size: 1,
       onGround: false,
-      health: 10
+      health: 10,
     };
 
     const gravity = 0.2;
@@ -100,16 +99,12 @@
     };
 
     let keys = {};
-    let mobileControls = { left: false, right: false };
+    let mobileControls = { left: false, right: false, jump: false };
 
     function drawWorld() {
       for (let y = 0; y < tilesY; y++) {
         for (let x = 0; x < tilesX; x++) {
-          if (world[y][x] > 0) {
-            ctx.fillStyle = blockTypes[world[y][x]];
-          } else {
-            ctx.fillStyle = '#87CEEB'; // Sky
-          }
+          ctx.fillStyle = world[y][x] > 0 ? blockTypes[world[y][x]] : '#87CEEB';
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         }
       }
@@ -117,21 +112,22 @@
 
     function drawPlayer() {
       ctx.fillStyle = 'red';
-      ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+      ctx.fillRect(Math.floor(player.x * tileSize), Math.floor(player.y * tileSize), tileSize, tileSize);
     }
 
     function updatePlayer() {
-      // Apply gravity
       player.dy += gravity;
-
-      // Update position
       player.x += player.dx;
       player.y += player.dy;
 
-      // Collision with ground
-      const xTile = Math.floor(player.x);
-      const yTile = Math.floor(player.y + player.size);
-      if (world[yTile] && world[yTile][xTile] > 0) {
+      const leftTile = Math.floor(player.x);
+      const rightTile = Math.floor(player.x + player.size);
+      const bottomTile = Math.floor(player.y + player.size);
+
+      if (
+        (world[bottomTile] && world[bottomTile][leftTile] > 0) ||
+        (world[bottomTile] && world[bottomTile][rightTile] > 0)
+      ) {
         player.y = Math.floor(player.y);
         player.dy = 0;
         player.onGround = true;
@@ -139,14 +135,12 @@
         player.onGround = false;
       }
 
-      // Prevent going out of bounds
       if (player.x < 0) player.x = 0;
       if (player.x > tilesX - 1) player.x = tilesX - 1;
       if (player.y > tilesY - 1) player.y = tilesY - 1;
     }
 
     function handleMovement() {
-      // Keyboard or mobile controls
       if (keys['ArrowLeft'] || keys['a'] || mobileControls.left) player.dx = -speed;
       else if (keys['ArrowRight'] || keys['d'] || mobileControls.right) player.dx = speed;
       else player.dx = 0;
@@ -174,24 +168,25 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // Keyboard listeners
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
-    });
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
 
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
-
-    // Mobile control listeners
     document.getElementById('left').addEventListener('mousedown', () => mobileControls.left = true);
     document.getElementById('left').addEventListener('mouseup', () => mobileControls.left = false);
     document.getElementById('right').addEventListener('mousedown', () => mobileControls.right = true);
     document.getElementById('right').addEventListener('mouseup', () => mobileControls.right = false);
     document.getElementById('jump').addEventListener('mousedown', () => mobileControls.jump = true);
     document.getElementById('jump').addEventListener('mouseup', () => mobileControls.jump = false);
+    document.getElementById('jump').addEventListener('touchend', () => mobileControls.jump = false);
 
-    // Build button listener
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      tilesX = Math.ceil(canvas.width / tileSize);
+      tilesY = Math.ceil(canvas.height / tileSize);
+      // Reinitialize world (optional)
+    });
+
     document.getElementById('build').addEventListener('click', placeBlock);
 
     gameLoop();
