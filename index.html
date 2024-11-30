@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Minecraft</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #87CEEB; /* Sky blue */
+        }
+        canvas {
+            border: 2px solid #000;
+            background: #87CEEB;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Set canvas size
+        const TILE_SIZE = 32;
+        const ROWS = 15;
+        const COLS = 20;
+        canvas.width = COLS * TILE_SIZE;
+        canvas.height = ROWS * TILE_SIZE;
+
+        // Initialize grid
+        const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+        // Block types
+        const BLOCK_TYPES = {
+            DIRT: "brown",
+            GRASS: "green",
+            STONE: "gray",
+        };
+
+        // Current selected block type
+        let currentBlock = BLOCK_TYPES.DIRT;
+
+        // Draw grid
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const block = grid[row][col];
+                    if (block) {
+                        ctx.fillStyle = block;
+                        ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                    ctx.strokeStyle = "black";
+                    ctx.strokeRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+
+        // Handle mouse clicks
+        canvas.addEventListener("click", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const col = Math.floor(x / TILE_SIZE);
+            const row = Math.floor(y / TILE_SIZE);
+
+            // Place or remove block
+            if (grid[row][col]) {
+                grid[row][col] = null; // Remove block
+            } else {
+                grid[row][col] = currentBlock; // Place block
+            }
+
+            drawGrid();
+        });
+
+        // Handle keyboard input for changing blocks
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "1") currentBlock = BLOCK_TYPES.DIRT;
+            if (e.key === "2") currentBlock = BLOCK_TYPES.GRASS;
+            if (e.key === "3") currentBlock = BLOCK_TYPES.STONE;
+        });
+
+        // Initial draw
+        drawGrid();
+    </script>
+</body>
+</html>
