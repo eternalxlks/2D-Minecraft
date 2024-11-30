@@ -4,3 +4,5 @@ This is a very basic game, and this is 2D minecraft, but you can only build. It'
 Space: Place or remove blocks
 1,2,3: change block
 Move: All arrow keys
+# Show Builds
+Show Your best builds in issues!
