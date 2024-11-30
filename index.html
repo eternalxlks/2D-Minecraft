@@ -108,6 +108,24 @@
         document.getElementById("attack").addEventListener("touchstart", () => (keys.attack = true));
         document.getElementById("attack").addEventListener("touchend", () => (keys.attack = false));
 
+        // Add keyboard controls for movement and actions
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft" || e.key === "a") keys.left = true;
+            if (e.key === "ArrowRight" || e.key === "d") keys.right = true;
+            if (e.key === "ArrowUp" || e.key === "w") {
+                if (player.onGround) player.dy = -10;
+            }
+            if (e.key === " ") keys.placeBlock = true; // space to place blocks
+            if (e.key === "f") keys.attack = true; // 'f' to attack
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowLeft" || e.key === "a") keys.left = false;
+            if (e.key === "ArrowRight" || e.key === "d") keys.right = false;
+            if (e.key === " ") keys.placeBlock = false;
+            if (e.key === "f") keys.attack = false;
+        });
+
         // Enemy object
         function createEnemy(x, y) {
             enemies.push({ x, y, width: TILE_SIZE, height: TILE_SIZE, color: ENEMY_COLOR, dx: 2 });
