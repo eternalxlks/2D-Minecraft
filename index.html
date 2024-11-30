@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Minecraft</title>
+    <title>2D Minecraft with Player</title>
     <style>
         body {
             margin: 0;
@@ -42,10 +42,17 @@
             STONE: "gray",
         };
 
+        // Player properties
+        const player = {
+            x: 5, // Grid position (column)
+            y: 10, // Grid position (row)
+            color: "blue",
+        };
+
         // Current selected block type
         let currentBlock = BLOCK_TYPES.DIRT;
 
-        // Draw grid
+        // Draw the grid and player
         function drawGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -60,32 +67,62 @@
                     ctx.strokeRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
             }
+
+            // Draw the player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x * TILE_SIZE, player.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
 
-        // Handle mouse clicks
-        canvas.addEventListener("click", (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            const col = Math.floor(x / TILE_SIZE);
-            const row = Math.floor(y / TILE_SIZE);
-
-            // Place or remove block
-            if (grid[row][col]) {
-                grid[row][col] = null; // Remove block
+        // Place or remove blocks
+        function interactWithBlock() {
+            const { x, y } = player;
+            if (grid[y][x]) {
+                grid[y][x] = null; // Remove block
             } else {
-                grid[row][col] = currentBlock; // Place block
+                grid[y][x] = currentBlock; // Place block
             }
+        }
 
-            drawGrid();
-        });
+        // Handle player movement
+        function movePlayer(dx, dy) {
+            const newX = player.x + dx;
+            const newY = player.y + dy;
 
-        // Handle keyboard input for changing blocks
+            if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS) {
+                player.x = newX;
+                player.y = newY;
+            }
+        }
+
+        // Handle keyboard input
         window.addEventListener("keydown", (e) => {
-            if (e.key === "1") currentBlock = BLOCK_TYPES.DIRT;
-            if (e.key === "2") currentBlock = BLOCK_TYPES.GRASS;
-            if (e.key === "3") currentBlock = BLOCK_TYPES.STONE;
+            switch (e.key) {
+                case "ArrowUp":
+                    movePlayer(0, -1); // Move up
+                    break;
+                case "ArrowDown":
+                    movePlayer(0, 1); // Move down
+                    break;
+                case "ArrowLeft":
+                    movePlayer(-1, 0); // Move left
+                    break;
+                case "ArrowRight":
+                    movePlayer(1, 0); // Move right
+                    break;
+                case " ":
+                    interactWithBlock(); // Place/remove block
+                    break;
+                case "1":
+                    currentBlock = BLOCK_TYPES.DIRT;
+                    break;
+                case "2":
+                    currentBlock = BLOCK_TYPES.GRASS;
+                    break;
+                case "3":
+                    currentBlock = BLOCK_TYPES.STONE;
+                    break;
+            }
+            drawGrid();
         });
 
         // Initial draw
