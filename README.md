@@ -1,6 +1,7 @@
 # 2D-Minecraft
 This is a very basic game, and this is 2D minecraft, but you can only build. It's a grid based system
 # Controls
+##### Keyboard
 Arrow keys to move
 Space to place blocks
 ##### Mobile
