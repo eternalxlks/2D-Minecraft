@@ -1,200 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2D Minecraft with Mobile Controls</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: sans-serif;
-    }
-    canvas {
-      display: block;
-      background-color: #87CEEB;
-    }
-    .controls {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 100;
-    }
-    .mobile-controls {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      justify-content: space-between;
-      width: 300px;
-      z-index: 100;
-    }
-    .controls button, .controls select, .mobile-controls button {
-      width: 60px;
-      height: 60px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background-color: #333;
-      color: white;
-      cursor: pointer;
-    }
-    .controls select {
-      width: auto;
-      padding: 5px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Fortnite with Mobile and Keyboard Controls</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background: #87CEEB;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+        .controls button {
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div class="controls">
-    <select id="blockType">
-      <option value="1">Dirt</option>
-      <option value="2">Stone</option>
-      <option value="3">Grass</option>
-    </select>
-    <button id="build">🛠️ Build</button>
-  </div>
-  <div class="mobile-controls">
-    <button id="left">⬅️</button>
-    <button id="jump">⬆️</button>
-    <button id="right">➡️</button>
-  </div>
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <button id="left">⬅️</button>
+        <button id="up">⬆️</button>
+        <button id="right">➡️</button>
+        <button id="shoot">🔫</button>
+    </div>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-    const tileSize = 40;
-    const tilesX = Math.ceil(canvas.width / tileSize);
-    const tilesY = Math.ceil(canvas.height / tileSize);
+        // Canvas setup
+        canvas.width = 800;
+        canvas.height = 600;
 
-    // Generate the world: top half empty, bottom half filled with dirt
-    let world = Array(tilesY).fill().map((_, y) =>
-      Array(tilesX).fill(y > tilesY / 2 ? 1 : 0)
-    );
+        // Player object
+        const player = {
+            x: 400,
+            y: 300,
+            width: 30,
+            height: 30,
+            color: "blue",
+            speed: 5,
+            health: 100,
+            weapon: null, // Current weapon
+        };
 
-    const player = {
-      x: tilesX / 2,
-      y: tilesY / 2 - 2,
-      dx: 0,
-      dy: 0,
-      size: 1,
-      onGround: false,
-      health: 10
-    };
+        // Weapons on the ground
+        const weapons = [
+            { x: 300, y: 200, width: 20, height: 20, color: "gold", type: "pistol" },
+            { x: 500, y: 400, width: 20, height: 20, color: "silver", type: "rifle" },
+        ];
 
-    const gravity = 0.2;
-    const jumpStrength = -5;
-    const speed = 0.1;
+        // Bullets
+        const bullets = [];
 
-    const blockTypes = {
-      1: '#654321', // Dirt
-      2: '#808080', // Stone
-      3: '#228B22', // Grass
-    };
+        // Enemies
+        const enemies = [
+            { x: 600, y: 200, width: 30, height: 30, color: "red", speed: 1, damage: 10 },
+            { x: 200, y: 300, width: 30, height: 30, color: "red", speed: 1, damage: 10 },
+        ];
 
-    let keys = {};
-    let mobileControls = { left: false, right: false };
+        // Controls
+        const keys = {};
+        const mobileControls = { left: false, up: false, right: false, shoot: false };
 
-    function drawWorld() {
-      for (let y = 0; y < tilesY; y++) {
-        for (let x = 0; x < tilesX; x++) {
-          if (world[y][x] > 0) {
-            ctx.fillStyle = blockTypes[world[y][x]];
-          } else {
-            ctx.fillStyle = '#87CEEB'; // Sky
-          }
-          ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        // Event listeners for keyboard
+        window.addEventListener("keydown", (e) => {
+            keys[e.key] = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            keys[e.key] = false;
+            if (e.key === " " && player.weapon) {
+                shootBullet();
+            }
+        });
+
+        // Mobile controls
+        document.getElementById("left").addEventListener("mousedown", () => mobileControls.left = true);
+        document.getElementById("left").addEventListener("mouseup", () => mobileControls.left = false);
+        document.getElementById("up").addEventListener("mousedown", () => mobileControls.up = true);
+        document.getElementById("up").addEventListener("mouseup", () => mobileControls.up = false);
+        document.getElementById("right").addEventListener("mousedown", () => mobileControls.right = true);
+        document.getElementById("right").addEventListener("mouseup", () => mobileControls.right = false);
+        document.getElementById("shoot").addEventListener("mousedown", () => mobileControls.shoot = true);
+        document.getElementById("shoot").addEventListener("mouseup", () => mobileControls.shoot = false);
+
+        // Helper function for shooting bullets
+        function shootBullet() {
+            if (player.weapon) {
+                bullets.push({
+                    x: player.x + player.width / 2 - 5,
+                    y: player.y,
+                    width: 5,
+                    height: 5,
+                    color: "yellow",
+                    speed: 10,
+                });
+            }
         }
-      }
-    }
 
-    function drawPlayer() {
-      ctx.fillStyle = 'red';
-      ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
-    }
+        // Update game state
+        function update() {
+            // Player movement
+            if (keys["ArrowUp"] || mobileControls.up) player.y -= player.speed;
+            if (keys["ArrowDown"]) player.y += player.speed;
+            if (keys["ArrowLeft"] || mobileControls.left) player.x -= player.speed;
+            if (keys["ArrowRight"] || mobileControls.right) player.x += player.speed;
 
-    function updatePlayer() {
-      // Apply gravity
-      player.dy += gravity;
+            // Shoot bullets on mobile
+            if (mobileControls.shoot) {
+                shootBullet();
+                mobileControls.shoot = false; // Prevent continuous shooting
+            }
 
-      // Update position
-      player.x += player.dx;
-      player.y += player.dy;
+            // Weapon pickup
+            weapons.forEach((weapon, index) => {
+                if (
+                    player.x < weapon.x + weapon.width &&
+                    player.x + player.width > weapon.x &&
+                    player.y < weapon.y + weapon.height &&
+                    player.y + player.height > weapon.y
+                ) {
+                    player.weapon = weapon.type; // Equip weapon
+                    weapons.splice(index, 1); // Remove weapon from the ground
+                }
+            });
 
-      // Collision with ground
-      const xTile = Math.floor(player.x);
-      const yTile = Math.floor(player.y + player.size);
-      if (world[yTile] && world[yTile][xTile] > 0) {
-        player.y = Math.floor(player.y);
-        player.dy = 0;
-        player.onGround = true;
-      } else {
-        player.onGround = false;
-      }
+            // Move bullets
+            bullets.forEach((bullet, index) => {
+                bullet.y -= bullet.speed;
+                if (bullet.y < 0) bullets.splice(index, 1); // Remove off-screen bullets
+            });
 
-      // Prevent going out of bounds
-      if (player.x < 0) player.x = 0;
-      if (player.x > tilesX - 1) player.x = tilesX - 1;
-      if (player.y > tilesY - 1) player.y = tilesY - 1;
-    }
+            // Check bullet-enemy collisions
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (
+                        bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y
+                    ) {
+                        bullets.splice(bIndex, 1); // Remove bullet
+                        enemies.splice(eIndex, 1); // Remove enemy
 
-    function handleMovement() {
-      // Keyboard or mobile controls
-      if (keys['ArrowLeft'] || keys['a'] || mobileControls.left) player.dx = -speed;
-      else if (keys['ArrowRight'] || keys['d'] || mobileControls.right) player.dx = speed;
-      else player.dx = 0;
+                        // Respawn enemy after 3 seconds
+                        setTimeout(() => {
+                            enemies.push({
+                                x: Math.random() * (canvas.width - 30),
+                                y: Math.random() * (canvas.height - 30),
+                                width: 30,
+                                height: 30,
+                                color: "red",
+                                speed: 1,
+                                damage: 10,
+                            });
+                        }, 3000);
+                    }
+                });
+            });
 
-      if ((keys['ArrowUp'] || keys[' '] || keys['w'] || mobileControls.jump) && player.onGround) {
-        player.dy = jumpStrength;
-      }
-    }
+            // Enemy movement and damage
+            enemies.forEach((enemy) => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-    function placeBlock() {
-      const blockType = parseInt(document.getElementById('blockType').value);
-      const xTile = Math.floor(player.x);
-      const yTile = Math.floor(player.y + player.size);
-      if (yTile < tilesY && xTile < tilesX && world[yTile][xTile] === 0) {
-        world[yTile][xTile] = blockType;
-      }
-    }
+                if (distance > 0) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                }
 
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawWorld();
-      drawPlayer();
-      handleMovement();
-      updatePlayer();
-      requestAnimationFrame(gameLoop);
-    }
+                // Check for collision with player
+                if (
+                    player.x < enemy.x + enemy.width &&
+                    player.x + player.width > enemy.x &&
+                    player.y < enemy.y + enemy.height &&
+                    player.y + player.height > enemy.y
+                ) {
+                    player.health -= enemy.damage; // Reduce player health
+                    if (player.health <= 0) {
+                        alert("Game Over!");
+                        window.location.reload(); // Restart game
+                    }
+                }
+            });
+        }
 
-    // Keyboard listeners
-    window.addEventListener('keydown', (e) => {
-      keys[e.key] = true;
-    });
+        // Draw game objects
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    window.addEventListener('keyup', (e) => {
-      keys[e.key] = false;
-    });
+            // Draw player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
 
-    // Mobile control listeners
-    document.getElementById('left').addEventListener('mousedown', () => mobileControls.left = true);
-    document.getElementById('left').addEventListener('mouseup', () => mobileControls.left = false);
-    document.getElementById('right').addEventListener('mousedown', () => mobileControls.right = true);
-    document.getElementById('right').addEventListener('mouseup', () => mobileControls.right = false);
-    document.getElementById('jump').addEventListener('mousedown', () => mobileControls.jump = true);
-    document.getElementById('jump').addEventListener('mouseup', () => mobileControls.jump = false);
+            // Draw weapons
+            weapons.forEach((weapon) => {
+                ctx.fillStyle = weapon.color;
+                ctx.fillRect(weapon.x, weapon.y, weapon.width, weapon.height);
+            });
 
-    // Build button listener
-    document.getElementById('build').addEventListener('click', placeBlock);
+            // Draw bullets
+            bullets.forEach((bullet) => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
 
-    gameLoop();
-  </script>
+            // Draw enemies
+            enemies.forEach((enemy) => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // Draw health bar
+            ctx.fillStyle = "green";
+            ctx.fillRect(10, 10, player.health * 2, 20); // Scale health to fit the bar
+            ctx.strokeStyle = "black";
+            ctx.strokeRect(10, 10, 200, 20); // Draw health bar outline
+
+            // Draw current weapon
+            if (player.weapon) {
+                ctx.fillStyle = "black";
+                ctx.fillText(`Weapon: ${player.weapon}`, 10, 50);
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start game
+        gameLoop();
+    </script>
 </body>
 </html>
