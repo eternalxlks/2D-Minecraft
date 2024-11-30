@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2D Minecraft Expanded</title>
+  <title>2D Minecraft with Mobile Controls</title>
   <style>
     body {
       margin: 0;
@@ -21,8 +21,19 @@
       transform: translateX(-50%);
       display: flex;
       gap: 10px;
+      z-index: 100;
     }
-    .controls button, .controls select {
+    .mobile-controls {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: space-between;
+      width: 300px;
+      z-index: 100;
+    }
+    .controls button, .controls select, .mobile-controls button {
       width: 60px;
       height: 60px;
       font-size: 18px;
@@ -41,17 +52,17 @@
 <body>
   <canvas id="gameCanvas"></canvas>
   <div class="controls">
-    <button id="left">⬅️</button>
-    <button id="jump">⬆️</button>
-    <button id="right">➡️</button>
     <select id="blockType">
       <option value="1">Dirt</option>
       <option value="2">Stone</option>
+      <option value="3">Grass</option>
     </select>
-    <button id="build">🛠️</button>
-    <button id="attack">⚔️</button>
-    <button id="save">💾</button>
-    <button id="load">📂</button>
+    <button id="build">🛠️ Build</button>
+  </div>
+  <div class="mobile-controls">
+    <button id="left">⬅️</button>
+    <button id="jump">⬆️</button>
+    <button id="right">➡️</button>
   </div>
   <script>
     const canvas = document.getElementById('gameCanvas');
@@ -63,6 +74,7 @@
     const tilesX = Math.ceil(canvas.width / tileSize);
     const tilesY = Math.ceil(canvas.height / tileSize);
 
+    // Generate the world: top half empty, bottom half filled with dirt
     let world = Array(tilesY).fill().map((_, y) =>
       Array(tilesX).fill(y > tilesY / 2 ? 1 : 0)
     );
@@ -77,23 +89,27 @@
       health: 10
     };
 
-    const enemy = {
-      x: tilesX / 2 - 5,
-      y: tilesY / 2 - 2,
-      dx: 0.02,
-      health: 5
-    };
-
     const gravity = 0.2;
     const jumpStrength = -5;
-    const speed = 0.2;
+    const speed = 0.1;
+
+    const blockTypes = {
+      1: '#654321', // Dirt
+      2: '#808080', // Stone
+      3: '#228B22', // Grass
+    };
+
+    let keys = {};
+    let mobileControls = { left: false, right: false };
 
     function drawWorld() {
       for (let y = 0; y < tilesY; y++) {
         for (let x = 0; x < tilesX; x++) {
-          if (world[y][x] === 1) ctx.fillStyle = '#654321'; // Dirt
-          else if (world[y][x] === 2) ctx.fillStyle = '#808080'; // Stone
-          else ctx.fillStyle = '#87CEEB';
+          if (world[y][x] > 0) {
+            ctx.fillStyle = blockTypes[world[y][x]];
+          } else {
+            ctx.fillStyle = '#87CEEB'; // Sky
+          }
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         }
       }
@@ -102,40 +118,41 @@
     function drawPlayer() {
       ctx.fillStyle = 'red';
       ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
-      ctx.fillStyle = 'white';
-      ctx.fillText(`HP: ${player.health}`, player.x * tileSize, player.y * tileSize - 10);
-    }
-
-    function drawEnemy() {
-      ctx.fillStyle = 'green';
-      ctx.fillRect(enemy.x * tileSize, enemy.y * tileSize, tileSize, tileSize);
-      ctx.fillStyle = 'white';
-      ctx.fillText(`HP: ${enemy.health}`, enemy.x * tileSize, enemy.y * tileSize - 10);
     }
 
     function updatePlayer() {
+      // Apply gravity
       player.dy += gravity;
+
+      // Update position
       player.x += player.dx;
       player.y += player.dy;
 
+      // Collision with ground
       const xTile = Math.floor(player.x);
       const yTile = Math.floor(player.y + player.size);
-      if (world[yTile] && world[yTile][xTile] === 1) {
+      if (world[yTile] && world[yTile][xTile] > 0) {
         player.y = Math.floor(player.y);
         player.dy = 0;
         player.onGround = true;
       } else {
         player.onGround = false;
       }
+
+      // Prevent going out of bounds
+      if (player.x < 0) player.x = 0;
+      if (player.x > tilesX - 1) player.x = tilesX - 1;
+      if (player.y > tilesY - 1) player.y = tilesY - 1;
     }
 
-    function updateEnemy() {
-      enemy.x += enemy.dx;
+    function handleMovement() {
+      // Keyboard or mobile controls
+      if (keys['ArrowLeft'] || keys['a'] || mobileControls.left) player.dx = -speed;
+      else if (keys['ArrowRight'] || keys['d'] || mobileControls.right) player.dx = speed;
+      else player.dx = 0;
 
-      const xTile = Math.floor(enemy.x);
-      const yTile = Math.floor(enemy.y + enemy.size);
-      if (!world[yTile] || world[yTile][xTile] === 0) {
-        enemy.dx *= -1; // Reverse direction on edge
+      if ((keys['ArrowUp'] || keys[' '] || keys['w'] || mobileControls.jump) && player.onGround) {
+        player.dy = jumpStrength;
       }
     }
 
@@ -143,28 +160,8 @@
       const blockType = parseInt(document.getElementById('blockType').value);
       const xTile = Math.floor(player.x);
       const yTile = Math.floor(player.y + player.size);
-      if (yTile < tilesY && xTile < tilesX) world[yTile][xTile] = blockType;
-    }
-
-    function attack() {
-      const distX = Math.abs(player.x - enemy.x);
-      const distY = Math.abs(player.y - enemy.y);
-      if (distX < 1 && distY < 1) {
-        enemy.health -= 1;
-        if (enemy.health <= 0) console.log("Enemy defeated!");
-      }
-    }
-
-    function saveWorld() {
-      localStorage.setItem('world', JSON.stringify(world));
-      alert('World saved!');
-    }
-
-    function loadWorld() {
-      const savedWorld = JSON.parse(localStorage.getItem('world'));
-      if (savedWorld) {
-        world = savedWorld;
-        alert('World loaded!');
+      if (yTile < tilesY && xTile < tilesX && world[yTile][xTile] === 0) {
+        world[yTile][xTile] = blockType;
       }
     }
 
@@ -172,23 +169,30 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawWorld();
       drawPlayer();
-      drawEnemy();
+      handleMovement();
       updatePlayer();
-      updateEnemy();
       requestAnimationFrame(gameLoop);
     }
 
-    document.getElementById('left').addEventListener('mousedown', () => player.dx = -speed);
-    document.getElementById('right').addEventListener('mousedown', () => player.dx = speed);
-    document.getElementById('jump').addEventListener('mousedown', () => {
-      if (player.onGround) player.dy = jumpStrength;
+    // Keyboard listeners
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
     });
-    document.getElementById('build').addEventListener('mousedown', placeBlock);
-    document.getElementById('attack').addEventListener('mousedown', attack);
-    document.getElementById('save').addEventListener('click', saveWorld);
-    document.getElementById('load').addEventListener('click', loadWorld);
 
-    document.body.addEventListener('mouseup', () => player.dx = 0);
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // Mobile control listeners
+    document.getElementById('left').addEventListener('mousedown', () => mobileControls.left = true);
+    document.getElementById('left').addEventListener('mouseup', () => mobileControls.left = false);
+    document.getElementById('right').addEventListener('mousedown', () => mobileControls.right = true);
+    document.getElementById('right').addEventListener('mouseup', () => mobileControls.right = false);
+    document.getElementById('jump').addEventListener('mousedown', () => mobileControls.jump = true);
+    document.getElementById('jump').addEventListener('mouseup', () => mobileControls.jump = false);
+
+    // Build button listener
+    document.getElementById('build').addEventListener('click', placeBlock);
 
     gameLoop();
   </script>
