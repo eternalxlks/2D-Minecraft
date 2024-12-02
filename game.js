@@ -33,6 +33,7 @@ const blockTypes = {
 
 let keys = {};
 let mobileControls = { left: false, right: false, jump: false };
+let currentBlock = 1; // Default block type is Dirt
 
 function drawWorld() {
   for (let y = 0; y < tilesY; y++) {
@@ -48,14 +49,8 @@ function drawPlayer() {
   ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
 }
 
-function drawPlayer() {
-  ctx.fillStyle = 'red';
-  ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
-}
-
 function updatePlayer() {
-  // Apply gravity
-  player.dy += gravity;
+  player.dy += gravity;  // Apply gravity
 
   // Horizontal movement
   player.x += player.dx;
@@ -63,7 +58,7 @@ function updatePlayer() {
   // Vertical movement
   player.y += player.dy;
 
-  // Collision detection (ground)
+  // Collision detection with ground
   const leftTile = Math.floor(player.x);
   const rightTile = Math.floor(player.x + player.size);
   const bottomTile = Math.floor(player.y + player.size);
@@ -72,7 +67,7 @@ function updatePlayer() {
     (world[bottomTile] && world[bottomTile][leftTile] > 0) ||
     (world[bottomTile] && world[bottomTile][rightTile] > 0)
   ) {
-    player.y = Math.floor(player.y); // Correct the player's vertical position
+    player.y = Math.floor(player.y); // Correct vertical position
     player.dy = 0;
     player.onGround = true;
   } else {
@@ -104,7 +99,6 @@ function handleMovement() {
 }
 
 function placeBlock() {
-  const blockType = parseInt(document.getElementById('blockType').value);
   const targetX = Math.floor(player.x + player.facing);
   const targetY = Math.floor(player.y + player.size - 1);
 
@@ -115,8 +109,13 @@ function placeBlock() {
     targetY < tilesY &&
     world[targetY][targetX] === 0
   ) {
-    world[targetY][targetX] = blockType;
+    world[targetY][targetX] = currentBlock;
   }
+}
+
+function changeBlock() {
+  currentBlock = (currentBlock % 3) + 1; // Cycle through block types 1, 2, 3
+  document.getElementById('blockType').value = currentBlock;
 }
 
 function gameLoop() {
@@ -128,8 +127,18 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-window.addEventListener('keydown', (e) => (keys[e.key] = true));
-window.addEventListener('keyup', (e) => (keys[e.key] = false));
+window.addEventListener('keydown', (e) => {
+  keys[e.key] = true;
+  if (e.key === 'e' || e.key === 'E') {
+    changeBlock();
+  } else if (e.key === 'b' || e.key === 'B') {
+    placeBlock();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keys[e.key] = false;
+});
 
 document.getElementById('left').addEventListener('mousedown', () => (mobileControls.left = true));
 document.getElementById('left').addEventListener('mouseup', () => (mobileControls.left = false));
