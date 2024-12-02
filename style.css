@@ -58,4 +58,8 @@ canvas {
   height: 60px;
   font-size: 18px;
   border: none;
-  border-radius
+  border-radius: 8px;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+}
