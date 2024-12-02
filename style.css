@@ -1,0 +1,61 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+canvas {
+  display: block;
+  background-color: #87CEEB;
+}
+
+.control-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.control-panel h3 {
+  font-size: 18px;
+}
+
+.control-panel ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.control-panel li {
+  margin: 5px 0;
+}
+
+.controls {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+.mobile-controls {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: space-between;
+  width: 300px;
+  z-index: 100;
+}
+
+.controls button, .controls select, .mobile-controls button {
+  width: 60px;
+  height: 60px;
+  font-size: 18px;
+  border: none;
+  border-radius
