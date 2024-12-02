@@ -22,7 +22,7 @@ const player = {
 };
 
 const gravity = 0.2;
-const jumpStrength = -5;
+const jumpStrength = -3; // Reduced jump height
 const speed = 0.1;
 
 const blockTypes = {
@@ -58,7 +58,7 @@ function updatePlayer() {
   // Vertical movement
   player.y += player.dy;
 
-  // Collision detection with ground
+  // Collision detection with ground and placed blocks
   const leftTile = Math.floor(player.x);
   const rightTile = Math.floor(player.x + player.size);
   const bottomTile = Math.floor(player.y + player.size);
