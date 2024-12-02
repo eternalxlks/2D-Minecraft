@@ -8,18 +8,31 @@
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
-  <div class="controls">
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <h3>Controls</h3>
+    <ul>
+      <li>Change Block Type: <kbd>E</kbd></li>
+      <li>Place Block: <kbd>B</kbd></li>
+    </ul>
     <select id="blockType">
       <option value="1">Dirt</option>
       <option value="2">Stone</option>
       <option value="3">Grass</option>
     </select>
-    <button id="build">🛠️ Build</button>
   </div>
+
+  <!-- Mobile Controls -->
   <div class="mobile-controls">
     <button id="left">⬅️</button>
     <button id="jump">⬆️</button>
     <button id="right">➡️</button>
+  </div>
+
+  <!-- Bottom Controls -->
+  <div class="controls">
+    <button id="build">🛠️ Build</button>
   </div>
 
   <script src="game.js"></script>
