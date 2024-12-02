@@ -140,12 +140,13 @@ window.addEventListener('keyup', (e) => {
   keys[e.key] = false;
 });
 
-document.getElementById('left').addEventListener('mousedown', () => (mobileControls.left = true));
-document.getElementById('left').addEventListener('mouseup', () => (mobileControls.left = false));
-document.getElementById('right').addEventListener('mousedown', () => (mobileControls.right = true));
-document.getElementById('right').addEventListener('mouseup', () => (mobileControls.right = false));
-document.getElementById('jump').addEventListener('mousedown', () => (mobileControls.jump = true));
-document.getElementById('jump').addEventListener('mouseup', () => (mobileControls.jump = false));
+// Mobile Controls
+document.getElementById('left').addEventListener('touchstart', () => (mobileControls.left = true));
+document.getElementById('left').addEventListener('touchend', () => (mobileControls.left = false));
+document.getElementById('right').addEventListener('touchstart', () => (mobileControls.right = true));
+document.getElementById('right').addEventListener('touchend', () => (mobileControls.right = false));
+document.getElementById('jump').addEventListener('touchstart', () => (mobileControls.jump = true));
+document.getElementById('jump').addEventListener('touchend', () => (mobileControls.jump = false));
 
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
